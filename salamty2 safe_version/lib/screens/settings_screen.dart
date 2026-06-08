@@ -5,15 +5,14 @@ import '../theme/app_theme.dart';
 import '../widgets/common.dart';
 
 // Import the public keys defined in profile_screen.dart
-import 'profile_screen.dart'
-    show kProfileName, kVehicleMake, kVehicleYear;
+import 'profile_screen.dart' show kProfileName, kVehicleMake, kVehicleYear;
 
 // ─────────────────────────────────────────────
 //  Document upload storage keys
 // ─────────────────────────────────────────────
 const _kDocLicensePath = 'doc_license_path';
-const _kDocIdPath      = 'doc_id_path';
-const _kDocPdfPath     = 'doc_pdf_path';
+const _kDocIdPath = 'doc_id_path';
+const _kDocPdfPath = 'doc_pdf_path';
 
 // ─────────────────────────────────────────────
 //  Upload file type enum
@@ -32,12 +31,12 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String? _subPage;
-  bool    _hwConnected = false;
-  final   _serialCtrl  = TextEditingController();
-  bool    _deviceFound = false;
-  String  _profileName = '';
-  String  _vehicleMake = '';
-  String  _vehicleYear = '2026';
+  bool _hwConnected = false;
+  final _serialCtrl = TextEditingController();
+  bool _deviceFound = false;
+  String _profileName = '';
+  String _vehicleMake = '';
+  String _vehicleYear = '2026';
 
   @override
   void initState() {
@@ -55,7 +54,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
-    final name  = prefs.getString(kProfileName) ?? '';
+    final name = prefs.getString(kProfileName) ?? '';
     setState(() {
       _profileName = name.trim().isEmpty ? 'Guest User' : name.trim();
       _vehicleMake = prefs.getString(kVehicleMake) ?? '';
@@ -70,10 +69,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   String get _initials {
-    final parts = _profileName.trim()
-        .split(' ')
-        .where((w) => w.isNotEmpty)
-        .toList();
+    final parts =
+        _profileName.trim().split(' ').where((w) => w.isNotEmpty).toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts[0][0].toUpperCase();
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
@@ -93,16 +90,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           },
           onActivate: () => setState(() {
             _hwConnected = true;
-            _subPage     = null;
+            _subPage = null;
           }),
           onBack: () => setState(() {
-            _subPage     = null;
+            _subPage = null;
             _deviceFound = false;
           }),
         );
       case 'documents':
-        return _DocumentsSubPage(
-            onBack: () => setState(() => _subPage = null));
+        return _DocumentsSubPage(onBack: () => setState(() => _subPage = null));
       default:
         return const SizedBox();
     }
@@ -133,8 +129,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         Expanded(
           child: ListView(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
               // ── Profile summary ──
               AppCard(
@@ -152,8 +147,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             decoration: BoxDecoration(
                               color: AppColors.green,
                               shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: AppColors.bg, width: 2),
+                              border: Border.all(color: AppColors.bg, width: 2),
                             ),
                           ),
                         ),
@@ -217,10 +211,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: (_hwConnected
-                                    ? AppColors.green
-                                    : AppColors.red)
-                                .withOpacity(0.12),
+                            color:
+                                (_hwConnected ? AppColors.green : AppColors.red)
+                                    .withOpacity(0.12),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                                 color: (_hwConnected
@@ -229,9 +222,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     .withOpacity(0.3)),
                           ),
                           child: Text(
-                              _hwConnected
-                                  ? '● Connected'
-                                  : '● Disconnected',
+                              _hwConnected ? '● Connected' : '● Disconnected',
                               style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
@@ -245,8 +236,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 10),
                     if (_hwConnected)
                       GestureDetector(
-                        onTap: () =>
-                            setState(() => _subPage = 'hardware'),
+                        onTap: () => setState(() => _subPage = 'hardware'),
                         child: const Text('Sync Now',
                             style: TextStyle(
                                 color: AppColors.blueLight,
@@ -256,8 +246,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     else
                       PrimaryButton(
                         label: 'Connect Hardware Device',
-                        onTap: () =>
-                            setState(() => _subPage = 'hardware'),
+                        onTap: () => setState(() => _subPage = 'hardware'),
                       ),
                   ],
                 ),
@@ -280,8 +269,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // ── Safety & Privacy ──
               const SectionLabel('Safety & Privacy'),
               AppCard(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: Column(
                   children: const [
                     ToggleRow(
@@ -324,8 +313,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
-                    SettingsRow(
-                        icon: Icons.help_outline, label: 'Help Center'),
+                    SettingsRow(icon: Icons.help_outline, label: 'Help Center'),
                     const Divider(color: AppColors.border, height: 1),
                     SettingsRow(
                       icon: Icons.info_outline,
@@ -408,9 +396,7 @@ class _HardwareSubPage extends StatelessWidget {
                     height: 10,
                     margin: const EdgeInsets.symmetric(horizontal: 3),
                     decoration: BoxDecoration(
-                      color: i == 0
-                          ? AppColors.blue
-                          : AppColors.textMuted,
+                      color: i == 0 ? AppColors.blue : AppColors.textMuted,
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),
@@ -441,8 +427,8 @@ class _HardwareSubPage extends StatelessWidget {
                 ),
                 decoration: const InputDecoration(
                   hintText: 'GX1-000-000-X',
-                  hintStyle: TextStyle(
-                      color: AppColors.textMuted, letterSpacing: 1),
+                  hintStyle:
+                      TextStyle(color: AppColors.textMuted, letterSpacing: 1),
                   suffixIcon: Icon(Icons.qr_code_scanner,
                       color: AppColors.textSecondary),
                 ),
@@ -506,16 +492,15 @@ class _HardwareSubPage extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.green.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: AppColors.green.withOpacity(0.25)),
+                    border:
+                        Border.all(color: AppColors.green.withOpacity(0.25)),
                   ),
                   child: Row(
                     children: const [
                       CircleAvatar(
                         radius: 14,
                         backgroundColor: AppColors.green,
-                        child: Icon(Icons.check,
-                            color: Colors.white, size: 16),
+                        child: Icon(Icons.check, color: Colors.white, size: 16),
                       ),
                       SizedBox(width: 12),
                       Column(
@@ -540,9 +525,7 @@ class _HardwareSubPage extends StatelessWidget {
               ],
               const SizedBox(height: 24),
               PrimaryButton(
-                label: deviceFound
-                    ? '⚡  Activate Device'
-                    : 'Find Device',
+                label: deviceFound ? '⚡  Activate Device' : 'Find Device',
                 onTap: deviceFound ? onActivate : onCheck,
               ),
               if (deviceFound) ...[
@@ -618,8 +601,7 @@ class _DocumentsSubPageState extends State<_DocumentsSubPage> {
                     text:
                         'Please provide clear photos of your official documents for account verification.',
                     style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontFamily: 'Outfit'),
+                        color: AppColors.textSecondary, fontFamily: 'Outfit'),
                   ),
                 ],
               ),
@@ -707,8 +689,8 @@ class _UploadSection extends StatefulWidget {
 
 class _UploadSectionState extends State<_UploadSection> {
   String? _pickedFileName;
-  bool    _isPicked  = false;
-  bool    _isLoading = false;
+  bool _isPicked = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -723,7 +705,7 @@ class _UploadSectionState extends State<_UploadSection> {
       if (mounted) {
         setState(() {
           _pickedFileName = saved.split('/').last;
-          _isPicked       = true;
+          _isPicked = true;
         });
       }
     }
@@ -756,7 +738,7 @@ class _UploadSectionState extends State<_UploadSection> {
 
         setState(() {
           _pickedFileName = file.name;
-          _isPicked       = true;
+          _isPicked = true;
         });
       }
     } catch (_) {
@@ -768,14 +750,13 @@ class _UploadSectionState extends State<_UploadSection> {
 
   @override
   Widget build(BuildContext context) {
-    final iconColor   = _isPicked ? AppColors.green : AppColors.blueLight;
-    final iconBg      = _isPicked
+    final iconColor = _isPicked ? AppColors.green : AppColors.blueLight;
+    final iconBg = _isPicked
         ? AppColors.green.withOpacity(0.15)
         : AppColors.blue.withOpacity(0.15);
     final borderColor = _isPicked ? AppColors.green : AppColors.border;
-    final bottomText  = _isPicked
-        ? (_pickedFileName ?? 'File selected')
-        : 'Browse Files';
+    final bottomText =
+        _isPicked ? (_pickedFileName ?? 'File selected') : 'Browse Files';
     final bottomStyle = TextStyle(
       fontSize: 13,
       fontWeight: FontWeight.w700,
@@ -805,8 +786,7 @@ class _UploadSectionState extends State<_UploadSection> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 250),
             width: double.infinity,
-            padding:
-                const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
             decoration: BoxDecoration(
               color: AppColors.card2,
               borderRadius: BorderRadius.circular(14),
