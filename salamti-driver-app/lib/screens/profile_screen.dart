@@ -550,7 +550,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 14),
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Expanded(
                           child: _VehicleEditField(
@@ -585,6 +585,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   isExpanded: true,
                                   dropdownColor: AppColors.card2,
                                   underline: const SizedBox(),
+                                  //itemHeight: 40,
                                   style: const TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
