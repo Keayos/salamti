@@ -200,13 +200,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   //  Save profile: vehicle → API, then cache locally. OBU claim if fields filled and not claimed yet.
-  Future<void> _save() async {
+  // ── Save vehicle only ──
+  Future<void> _saveVehicle() async {
     if (!_canSave) return;
     setState(() => _isSaving = true);
-
     final prefs = await SharedPreferences.getInstance();
-
-    // Save vehicle to API
     try {
       final token = await AuthService.getAccessToken();
       final headers = {
@@ -220,10 +218,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'year': int.tryParse(_year) ?? 2026,
         'licensePlate': _plateCtrl.text.trim(),
       });
-
       http.Response res;
       if (_vehicleId == null) {
-        // First time — POST
         res = await http.post(
           Uri.parse('${ApiConfig.baseUrl}/vehicles'),
           headers: headers,
@@ -236,15 +232,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           await prefs.setString(kVehicleId, _vehicleId!);
         }
       } else {
-        // Update — PATCH
         res = await http.patch(
           Uri.parse('${ApiConfig.baseUrl}/vehicles/$_vehicleId'),
           headers: headers,
           body: body,
         );
       }
-
-      // Cache vehicle fields locally
       await Future.wait([
         prefs.setString(kVehicleMake, _makerCtrl.text.trim()),
         prefs.setString(kVehicleModel, _modelCtrl.text.trim()),
@@ -270,19 +263,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() => _isSaving = false);
       return;
     }
+    setState(() => _isSaving = false);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Row(children: [
+          Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
+          SizedBox(width: 10),
+          Text('Vehicle saved successfully',
+              style:
+                  TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600)),
+        ]),
+        backgroundColor: AppColors.blue,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 2),
+      ));
+    }
+  }
 
-    // OBU claim, only if both fields are filled and not already claimed
+  // ── Connect OBU ──
+  Future<void> _connectObu() async {
     final inst = _instCtrl.text.trim();
     final sim = _simCtrl.text.trim();
+    if (inst.isEmpty || sim.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('Please fill in both OBU fields.',
+              style: TextStyle(fontFamily: 'Outfit')),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ));
+      }
+      return;
+    }
+    if (_vehicleId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('Please save your car data first.',
+              style: TextStyle(fontFamily: 'Outfit')),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ));
+      }
+      return;
+    }
+    setState(() => _isSaving = true);
+    final prefs = await SharedPreferences.getInstance();
+    final token = await AuthService.getAccessToken();
     final existingObuId = prefs.getString(kObuId);
-    String? newObuId;
+    String? obuId = existingObuId;
 
-    if (inst.isNotEmpty &&
-        sim.isNotEmpty &&
-        (existingObuId == null || existingObuId.isEmpty) &&
-        _vehicleId != null) {
+    // If no existing OBU, claim it first
+    if (existingObuId == null || existingObuId.isEmpty) {
       try {
-        final token = await AuthService.getAccessToken();
         final obuRes = await http.post(
           Uri.parse('${ApiConfig.baseUrl}/obus/claim'),
           headers: {
@@ -294,83 +331,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
             'simCardNumber': _formatPhone(sim),
           }),
         );
-
         if (obuRes.statusCode == 200 || obuRes.statusCode == 201) {
           final obu =
               jsonDecode(obuRes.body)['data']['obu'] as Map<String, dynamic>;
-          newObuId = obu['id'] as String;
+          obuId = obu['id'] as String;
           await Future.wait([
-            prefs.setString(kObuId, newObuId),
+            prefs.setString(kObuId, obuId),
             prefs.setString(kObuInstNumber, inst),
             prefs.setString(kObuSimNumber, sim),
           ]);
-
-          // Connect OBU to vehicle, the third endpoint, called in background after claiming
-          if (_vehicleId != null && newObuId.isNotEmpty) {
-            try {
-              final connectRes = await http.patch(
-                Uri.parse('${ApiConfig.baseUrl}/obus/$newObuId/connect'),
-                headers: {
-                  'Content-Type': 'application/json',
-                  if (token != null) 'Authorization': 'Bearer $token',
-                },
-                body: jsonEncode({
-                  'vehicleId': _vehicleId,
-                }),
-              );
-
-              if (connectRes.statusCode != 200 &&
-                  connectRes.statusCode != 201) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: const Text(
-                        'Connecting OBU and the car failed. Please try again.',
-                        style: TextStyle(fontFamily: 'Outfit')),
-                    backgroundColor: AppColors.red,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ));
-                }
-                setState(() => _isSaving = false);
-                return;
-              }
-            } catch (connectError) {
-              assert(() {
-                debugPrint('OBU connection error: $connectError');
-                return true;
-              }());
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: const Text(
-                      'Connecting OBU and the car failed. Please try again.',
-                      style: TextStyle(fontFamily: 'Outfit')),
-                  backgroundColor: AppColors.red,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ));
-              }
-              setState(() => _isSaving = false);
-              return;
-            }
-          }
         } else {
-          // ── Handle server rejecting the claim (e.g. 400 or 409) ──
+          String errorMsg = 'Failed to claim OBU device.';
+          try {
+            final responseData = jsonDecode(obuRes.body);
+            if (responseData['message'] != null)
+              errorMsg = responseData['message'];
+          } catch (jsonError) {
+            assert(() {
+              debugPrint('OBU claim parse error: $jsonError');
+              return true;
+            }());
+          }
           if (mounted) {
-            String errorMsg = 'Failed to claim OBU device.';
-            try {
-              final responseData = jsonDecode(obuRes.body);
-              if (responseData['message'] != null) {
-                errorMsg = responseData['message'];
-              }
-            } catch (jsonError) {
-              assert(() {
-                debugPrint('OBU claim response parse error: $jsonError');
-                return true;
-              }());
-            }
-
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content:
                   Text(errorMsg, style: const TextStyle(fontFamily: 'Outfit')),
@@ -401,20 +383,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() => _isSaving = false);
         return;
       }
-    } else if (inst.isNotEmpty && sim.isNotEmpty) {
-      // Already claimed — just update local cache
-      await Future.wait([
-        prefs.setString(kObuInstNumber, inst),
-        prefs.setString(kObuSimNumber, sim),
-      ]);
-    } else if (inst.isNotEmpty &&
-        sim.isNotEmpty &&
-        (existingObuId == null || existingObuId.isEmpty) &&
-        _vehicleId == null) {
+    }
+
+    // Connect OBU to vehicle
+    try {
+      final connectRes = await http.patch(
+        Uri.parse('${ApiConfig.baseUrl}/obus/$obuId/connect'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'vehicleId': _vehicleId}),
+      );
+      if (connectRes.statusCode != 200 && connectRes.statusCode != 201) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text(
+                'Connecting OBU and the car failed. Please try again.',
+                style: TextStyle(fontFamily: 'Outfit')),
+            backgroundColor: AppColors.red,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ));
+        }
+        setState(() => _isSaving = false);
+        return;
+      }
+    } catch (connectError) {
+      assert(() {
+        debugPrint('OBU connection error: $connectError');
+        return true;
+      }());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: const Text(
-              'Please save your car data before claiming an OBU device.',
+              'Connecting OBU and the car failed. Please try again.',
               style: TextStyle(fontFamily: 'Outfit')),
           backgroundColor: AppColors.red,
           behavior: SnackBarBehavior.floating,
@@ -426,20 +430,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    // ── Final Success State ──
     setState(() => _isSaving = false);
-
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
-            SizedBox(width: 10),
-            Text('Profile saved successfully',
-                style: TextStyle(
-                    fontFamily: 'Outfit', fontWeight: FontWeight.w600)),
-          ],
-        ),
+        content: const Row(children: [
+          Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
+          SizedBox(width: 10),
+          Text('OBU connected successfully',
+              style:
+                  TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600)),
+        ]),
         backgroundColor: AppColors.blue,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -629,6 +629,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'Accurate vehicle information is critical. Emergency responders use this data to identify your car in high-stress scenarios.'),
               const SizedBox(height: 24),
 
+              // ── Save Vehicle button ──
+              GestureDetector(
+                onTap: _canSave && !_isSaving ? _saveVehicle : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  decoration: BoxDecoration(
+                    color: _canSave
+                        ? AppColors.blue
+                        : AppColors.blue.withOpacity(0.35),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Center(
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Save Vehicle',
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                fontFamily: 'Outfit')),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
               // ── OBU Device ──
               const SectionLabel('OBU Device'),
               const SizedBox(height: 8),
@@ -694,17 +726,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
 
-              // ── Save button ──
+              // ── Connect OBU button ──
               GestureDetector(
-                onTap: _canSave && !_isSaving ? _save : null,
+                onTap: !_isSaving ? _connectObu : null,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   decoration: BoxDecoration(
-                    color: _canSave
-                        ? AppColors.blue
-                        : AppColors.blue.withOpacity(0.35),
+                    color: AppColors.blue,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Center(
@@ -715,7 +745,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white),
                           )
-                        : const Text(' Save ',
+                        : const Text('Connect OBU',
                             style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
