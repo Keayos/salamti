@@ -30,6 +30,9 @@ class _HomeScreenState extends State<HomeScreen>
   Map<String, dynamic>? _obuHealth;
   LatLng? _obuLocation; // non-null = show OBU location on map
   bool _obuLocationLoading = false;
+  String? _obuInstCached;
+  String? _obuVersionCached;
+  String? _obuSimCached;
 
   // ── Location state ─────────────────────────────────────────
   final MapController _mapController = MapController();
@@ -141,7 +144,11 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _loadObuId() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() => _obuId = prefs.getString('obu_id'));
+    setState(() {
+      _obuId = prefs.getString('obu_id');
+      _obuInstCached = prefs.getString('obu_inst_number');
+      _obuSimCached = prefs.getString('obu_sim_number');
+    });
   }
 
   // ── Load all OBU data sequentially ──
@@ -232,7 +239,21 @@ class _HomeScreenState extends State<HomeScreen>
       if (res.statusCode == 200 || res.statusCode == 201) {
         final health =
             jsonDecode(res.body)['data']['health'] as Map<String, dynamic>;
-        setState(() => _obuHealth = health);
+        setState(() {
+          _obuHealth = health;
+          _obuInstCached = health['inst'] as String? ?? _obuInstCached;
+          _obuVersionCached = health['version'] as String? ?? _obuVersionCached;
+          _obuSimCached = health['sim'] as String? ?? _obuSimCached;
+        });
+        final prefs = await SharedPreferences.getInstance();
+        await Future.wait([
+          if (_obuInstCached != null)
+            prefs.setString('obu_inst_number', _obuInstCached!),
+          if (_obuVersionCached != null)
+            prefs.setString('obu_version', _obuVersionCached!),
+          if (_obuSimCached != null)
+            prefs.setString('obu_sim_number', _obuSimCached!),
+        ]);
       }
     } catch (e) {
       assert(() {
@@ -432,159 +453,140 @@ class _HomeScreenState extends State<HomeScreen>
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.border),
                 ),
-                child: _obuControlsLoading
-                    ? const SizedBox(
-                        height: 120,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Center(
+                      child: Text('Control Your OBU',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                              letterSpacing: .5,
+                              fontFamily: 'Outfit')),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Activate / Deactivate button
+                    GestureDetector(
+                      onTap: _obuControlsLoading || _obuLoading
+                          ? null
+                          : _toggleObu,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: _obuActive
+                              ? AppColors.red.withOpacity(0.15)
+                              : AppColors.blue.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: _obuActive
+                                ? AppColors.red.withOpacity(0.4)
+                                : AppColors.blue.withOpacity(0.4),
+                          ),
+                        ),
                         child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CircularProgressIndicator(
-                                  color: AppColors.blueLight, strokeWidth: 2),
-                              SizedBox(height: 12),
-                              Text('Loading OBU controls...',
+                          child: _obuControlsLoading || _obuLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white),
+                                )
+                              : Text(
+                                  _obuActive
+                                      ? 'Deactivate OBU'
+                                      : 'Activate OBU',
                                   style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary,
-                                      fontFamily: 'Outfit')),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: _obuActive
+                                          ? AppColors.red
+                                          : AppColors.blueLight,
+                                      fontFamily: 'Outfit'),
+                                ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // OBU Health Status
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _obuHealthLoading
+                            ? const _ObuHealthRowLoading(label: 'Status')
+                            : _ObuHealthRow(
+                                label: 'Status',
+                                value: _obuHealth?['status'] == 'HEALTH_OK'
+                                    ? 'Safe'
+                                    : (_obuHealth?['status'] ?? '—')),
+                        _ObuHealthRow(
+                            label: 'Instance', value: _obuInstCached ?? '—'),
+                        _ObuHealthRow(
+                            label: 'Version', value: _obuVersionCached ?? '—'),
+                        _ObuHealthRow(
+                            label: 'SIM Card', value: _obuSimCached ?? '—'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Get OBU Location button
+                    GestureDetector(
+                      onTap: _obuLocationLoading ? null : _getObuLocation,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.blue.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: AppColors.blue.withOpacity(0.4)),
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _obuLocationLoading
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.blueLight),
+                                    )
+                                  : const Text('Get OBU Location',
+                                      style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.blueLight,
+                                          fontFamily: 'Outfit')),
+                              if (_obuLocation != null) ...[
+                                const SizedBox(width: 8),
+                                const Icon(Icons.location_on,
+                                    color: AppColors.green, size: 16),
+                              ],
                             ],
                           ),
                         ),
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Center(
-                            child: Text('Control Your OBU',
-                                style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.textPrimary,
-                                    letterSpacing: .5,
-                                    fontFamily: 'Outfit')),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Activate / Deactivate button
-                          GestureDetector(
-                            onTap: _obuLoading ? null : _toggleObu,
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              decoration: BoxDecoration(
-                                color: _obuActive
-                                    ? AppColors.red.withOpacity(0.15)
-                                    : AppColors.blue.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: _obuActive
-                                      ? AppColors.red.withOpacity(0.4)
-                                      : AppColors.blue.withOpacity(0.4),
-                                ),
-                              ),
-                              child: Center(
-                                child: _obuLoading
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white),
-                                      )
-                                    : Text(
-                                        _obuActive
-                                            ? 'Deactivate OBU'
-                                            : 'Activate OBU',
-                                        style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w700,
-                                            color: _obuActive
-                                                ? AppColors.red
-                                                : AppColors.blueLight,
-                                            fontFamily: 'Outfit'),
-                                      ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // OBU Health Status Display
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _ObuHealthRow(
-                                  label: 'Status',
-                                  value: _obuHealth?['status'] == 'HEALTH_OK'
-                                      ? 'Safe'
-                                      : (_obuHealth?['status'] ?? '—')),
-                              _ObuHealthRow(
-                                  label: 'Instance',
-                                  value: _obuHealth?['inst'] ?? '—'),
-                              _ObuHealthRow(
-                                  label: 'Version',
-                                  value: _obuHealth?['version'] ?? '—'),
-                              _ObuHealthRow(
-                                  label: 'SIM Card',
-                                  value: _obuHealth?['sim'] ?? '—'),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Get OBU Location button
-                          GestureDetector(
-                            onTap: _obuLocationLoading ? null : _getObuLocation,
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              decoration: BoxDecoration(
-                                color: AppColors.blue.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                    color: AppColors.blue.withOpacity(0.4)),
-                              ),
-                              child: Center(
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    _obuLocationLoading
-                                        ? const SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                color: AppColors.blueLight),
-                                          )
-                                        : const Text('Get OBU Location',
-                                            style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                                color: AppColors.blueLight,
-                                                fontFamily: 'Outfit')),
-                                    if (_obuLocation != null) ...[
-                                      const SizedBox(width: 8),
-                                      const Icon(Icons.location_on,
-                                          color: AppColors.green, size: 16),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (_obuLocation != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Center(
-                                child: const Text('Showing on map',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.green,
-                                        fontFamily: 'Outfit')),
-                              ),
-                            ),
-                        ],
                       ),
+                    ),
+                    if (_obuLocation != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Center(
+                          child: Text('Showing on map',
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.green,
+                                  fontFamily: 'Outfit')),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
 
@@ -977,6 +979,34 @@ class _ObuHealthRow extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
                   fontFamily: 'Outfit')),
+        ],
+      ),
+    );
+  }
+}
+
+class _ObuHealthRowLoading extends StatelessWidget {
+  final String label;
+  const _ObuHealthRowLoading({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                  fontFamily: 'Outfit')),
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+                strokeWidth: 2, color: AppColors.blueLight),
+          ),
         ],
       ),
     );

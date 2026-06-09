@@ -687,7 +687,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.sim_card_outlined,
                       label: 'SIM Card Number',
                       controller: _simCtrl,
-                      hint: '+201234567890',
+                      hint: '01234567890',
                       keyboardType: TextInputType.phone,
                       onChanged: (_) => setState(() {}),
                     ),
