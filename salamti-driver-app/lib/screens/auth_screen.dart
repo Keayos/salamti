@@ -139,7 +139,7 @@ class _AuthScreenState extends State<AuthScreen>
     final err = await AuthService.register(
       fullName: _nameCtrl.text.trim(),
       email: _emailCtrl.text.trim(),
-      phone: _phoneCtrl.text.trim(),
+      phone: '+2${_phoneCtrl.text.trim()}',
       password: _passCtrl.text,
       age: ageInt,
       bloodType: _bloodTypeApi!,

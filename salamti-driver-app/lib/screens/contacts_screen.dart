@@ -814,7 +814,7 @@ class _AddContactView extends StatelessWidget {
                         keyboardType: TextInputType.emailAddress),
                     LabeledInput(
                         label: 'Phone Number',
-                        hint: '+201 000 000 000',
+                        hint: '01 000 000 000',
                         prefixIcon: Icons.phone_outlined,
                         controller: phoneCtrl,
                         keyboardType: TextInputType.phone),
