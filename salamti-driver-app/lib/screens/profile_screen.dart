@@ -737,7 +737,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               // ── Connect OBU button ──
               GestureDetector(
-                onTap: _canConnectObu && !_isSaving ? _connectObu : null,
+                onTap: _canConnectObu && !_isConnecting ? _connectObu : null,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: double.infinity,
