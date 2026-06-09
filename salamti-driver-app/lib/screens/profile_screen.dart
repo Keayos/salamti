@@ -72,6 +72,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _colorCtrl.text.trim().isNotEmpty &&
       _plateCtrl.text.trim().isNotEmpty;
 
+  bool get _canConnectObu =>
+      _makerCtrl.text.trim().isNotEmpty &&
+      _modelCtrl.text.trim().isNotEmpty &&
+      _colorCtrl.text.trim().isNotEmpty &&
+      _plateCtrl.text.trim().isNotEmpty &&
+      _instCtrl.text.trim().isNotEmpty &&
+      _simCtrl.text.trim().isNotEmpty;
+
   String _formatPhone(String phone) {
     if (phone.startsWith('+2')) return phone;
     if (phone.startsWith('0')) return '+2$phone';
@@ -728,13 +736,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               // ── Connect OBU button ──
               GestureDetector(
-                onTap: !_isSaving ? _connectObu : null,
+                onTap: _canConnectObu && !_isSaving ? _connectObu : null,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   decoration: BoxDecoration(
-                    color: AppColors.blue,
+                    color: _canConnectObu
+                        ? AppColors.blue
+                        : AppColors.blue.withOpacity(0.35),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Center(
