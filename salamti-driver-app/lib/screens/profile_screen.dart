@@ -63,6 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _years = List.generate(27, (i) => (2026 - i).toString());
 
   bool _isSaving = false;
+  bool _isConnecting = false;
   bool _isLoading = true;
   String? _vehicleId; // null = no vehicle yet
 
@@ -319,7 +320,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
       return;
     }
-    setState(() => _isSaving = true);
+    setState(() => _isConnecting = true);
     final prefs = await SharedPreferences.getInstance();
     final token = await AuthService.getAccessToken();
     final existingObuId = prefs.getString(kObuId);
@@ -370,7 +371,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   borderRadius: BorderRadius.circular(10)),
             ));
           }
-          setState(() => _isSaving = false);
+          setState(() => _isConnecting = false);
           return;
         }
       } catch (networkError) {
@@ -388,7 +389,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ));
         }
-        setState(() => _isSaving = false);
+        setState(() => _isConnecting = false);
         return;
       }
     }
@@ -415,7 +416,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ));
         }
-        setState(() => _isSaving = false);
+        setState(() => _isConnecting = false);
         return;
       }
     } catch (connectError) {
@@ -434,11 +435,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ));
       }
-      setState(() => _isSaving = false);
+      setState(() => _isConnecting = false);
       return;
     }
 
-    setState(() => _isSaving = false);
+    setState(() => _isConnecting = false);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: const Row(children: [
@@ -748,7 +749,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Center(
-                    child: _isSaving
+                    child: _isConnecting
                         ? const SizedBox(
                             width: 20,
                             height: 20,
