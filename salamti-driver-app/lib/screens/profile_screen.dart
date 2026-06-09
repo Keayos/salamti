@@ -72,6 +72,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _colorCtrl.text.trim().isNotEmpty &&
       _plateCtrl.text.trim().isNotEmpty;
 
+  String _formatPhone(String phone) {
+    if (phone.startsWith('+2')) return phone;
+    if (phone.startsWith('0')) return '+2$phone';
+    return '+2$phone';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -285,7 +291,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
           body: jsonEncode({
             'instNumber': inst,
-            'simCardNumber': sim,
+            'simCardNumber': _formatPhone(sim),
           }),
         );
 
