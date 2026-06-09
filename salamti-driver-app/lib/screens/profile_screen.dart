@@ -60,7 +60,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _simCtrl = TextEditingController();
   String _year = '2026';
 
-  final _years = List.generate(15, (i) => (2026 - i).toString());
+  final _years = List.generate(27, (i) => (2026 - i).toString());
 
   bool _isSaving = false;
   bool _isLoading = true;
@@ -585,6 +585,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   isExpanded: true,
                                   dropdownColor: AppColors.card2,
                                   underline: const SizedBox(),
+                                  menuMaxHeight: 300,
                                   //itemHeight: 40,
                                   style: const TextStyle(
                                       fontSize: 14,
