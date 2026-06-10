@@ -375,6 +375,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final existingObuId = prefs.getString(kObuId);
     String? obuId = existingObuId;
 
+    // if obu was already connected
+    if (existingObuId != null && existingObuId.isNotEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('OBU is already connected to your car.',
+              style: TextStyle(fontFamily: 'Outfit')),
+          backgroundColor: AppColors.blue,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ));
+      }
+      setState(() => _isConnecting = false);
+      return;
+    }
+
     // If no existing OBU, claim it first
     if (existingObuId == null || existingObuId.isEmpty) {
       try {
