@@ -366,6 +366,24 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  Future<void> _sendSos() async {
+    final token = await AuthService.getAccessToken();
+    final res = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/accidents/app-sos'),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'lat': _currentPosition?.latitude ?? 0.0,
+        'lng': _currentPosition?.longitude ?? 0.0,
+      }),
+    );
+    if (res.statusCode != 200 && res.statusCode != 201) {
+      throw Exception('SOS failed: ${res.statusCode}');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -641,7 +659,10 @@ class _HomeScreenState extends State<HomeScreen>
 
         // ── SOS overlay ──
         if (_showSOS)
-          _SOSDialog(onDismiss: () => setState(() => _showSOS = false)),
+          _SOSDialog(
+            onDismiss: () => setState(() => _showSOS = false),
+            onConfirm: _sendSos,
+          ),
       ],
     );
   }
@@ -940,10 +961,19 @@ class _SOSButton extends StatelessWidget {
   }
 }
 
-//  SOS dialog
-class _SOSDialog extends StatelessWidget {
+class _SOSDialog extends StatefulWidget {
   final VoidCallback onDismiss;
-  const _SOSDialog({required this.onDismiss});
+  final Future<void> Function() onConfirm;
+  const _SOSDialog({required this.onDismiss, required this.onConfirm});
+
+  @override
+  State<_SOSDialog> createState() => _SOSDialogState();
+}
+
+class _SOSDialogState extends State<_SOSDialog> {
+  bool _loading = false;
+  bool _sent = false;
+  String? _error;
 
   @override
   Widget build(BuildContext context) {
@@ -970,22 +1000,56 @@ class _SOSDialog extends StatelessWidget {
                       color: AppColors.red,
                       fontFamily: 'Outfit')),
               const SizedBox(height: 8),
-              const Text(
-                'This will notify all emergency contacts and send your current location.',
+              Text(
+                _sent
+                    ? 'Emergency alert sent successfully.'
+                    : 'This will notify all emergency contacts and send your current location.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.textSecondary,
+                    color: _sent ? AppColors.green : AppColors.textSecondary,
                     fontFamily: 'Outfit',
                     height: 1.5),
               ),
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                Text(_error!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.red,
+                        fontFamily: 'Outfit')),
+              ],
               const SizedBox(height: 24),
-              PrimaryButton(
-                  label: 'Send Emergency Alert',
+              if (!_sent)
+                PrimaryButton(
+                  label: _loading ? 'Sending...' : 'Send Emergency Alert',
                   color: AppColors.red,
-                  onTap: onDismiss),
+                  onTap: _loading
+                      ? null
+                      : () async {
+                          setState(() {
+                            _loading = true;
+                            _error = null;
+                          });
+                          try {
+                            await widget.onConfirm();
+                            setState(() {
+                              _loading = false;
+                              _sent = true;
+                            });
+                          } catch (e) {
+                            setState(() {
+                              _loading = false;
+                              _error =
+                                  'Failed to send alert. Please try again.';
+                            });
+                          }
+                        },
+                ),
               const SizedBox(height: 12),
-              SecondaryButton(label: 'Cancel', onTap: onDismiss),
+              SecondaryButton(
+                  label: _sent ? 'Close' : 'Cancel', onTap: widget.onDismiss),
             ],
           ),
         ),
