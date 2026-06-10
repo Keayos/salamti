@@ -229,21 +229,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // 3. Clear local data
     print('[Settings] _logout: Clearing local storage');
     final prefs = await SharedPreferences.getInstance();
-    // Read medical data before clearing
-    final bloodType = prefs.getString('health_blood_type');
-    final conditions = prefs.getString('health_conditions');
-    final meds = prefs.getString('health_meds');
-    final allergies = prefs.getString('health_allergies');
 
     await prefs.clear();
 
-    // Restore medical data
-    if (bloodType != null)
-      await prefs.setString('health_blood_type', bloodType);
-    if (conditions != null)
-      await prefs.setString('health_conditions', conditions);
-    if (meds != null) await prefs.setString('health_meds', meds);
-    if (allergies != null) await prefs.setString('health_allergies', allergies);
     print('[Settings] _logout: Local storage cleared');
 
     // 4. Update the RootController state directly instead of using named routes
