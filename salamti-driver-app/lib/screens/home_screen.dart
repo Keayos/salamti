@@ -512,6 +512,44 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                     const SizedBox(height: 12),
 
+                    // Refresh OBU button
+                    GestureDetector(
+                      onTap: () async {
+                        await Future.wait([
+                          _checkObuHealth(),
+                          _fetchObuStatus(),
+                        ]);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.blue.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: AppColors.blue.withOpacity(0.3)),
+                        ),
+                        child: Center(
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.refresh,
+                                  color: AppColors.blueLight, size: 16),
+                              SizedBox(width: 6),
+                              Text('Refresh OBU',
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.blueLight,
+                                      fontFamily: 'Outfit')),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
                     // OBU Health Status
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
