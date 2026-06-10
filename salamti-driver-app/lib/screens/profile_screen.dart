@@ -234,11 +234,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
           headers: headers,
           body: body,
         );
-        if (res.statusCode == 200 || res.statusCode == 201) {
-          final v =
-              jsonDecode(res.body)['data']['vehicle'] as Map<String, dynamic>;
-          _vehicleId = v['id'] as String;
-          await prefs.setString(kVehicleId, _vehicleId!);
+        if (res.statusCode != 200 && res.statusCode != 201) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Server error: ${res.statusCode}',
+                  style: const TextStyle(fontFamily: 'Outfit')),
+              backgroundColor: AppColors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ));
+          }
+          setState(() => _isSaving = false);
+          return;
         }
       } else {
         res = await http.patch(
