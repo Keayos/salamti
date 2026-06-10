@@ -35,6 +35,7 @@ class _HealthScreenState extends State<HealthScreen> {
   void initState() {
     super.initState();
     _loadData();
+    _fetchFromServer();
   }
 
   Future<void> _loadData() async {
@@ -63,6 +64,75 @@ class _HealthScreenState extends State<HealthScreen> {
             .toList();
       }
     });
+  }
+
+  Future<void> _fetchFromServer() async {
+    try {
+      final token = await AuthService.getAccessToken();
+      if (token == null) return;
+      final res = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/drivers/medical-info'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final driver =
+            jsonDecode(res.body)['data']['driver'] as Map<String, dynamic>;
+
+        // Reverse blood type map: API value → UI label
+        const reverseBtMap = {
+          'A_PLUS': 'A+',
+          'A_MINUS': 'A-',
+          'B_PLUS': 'B+',
+          'B_MINUS': 'B-',
+          'AB_PLUS': 'AB+',
+          'AB_MINUS': 'AB-',
+          'O_PLUS': 'O+',
+          'O_MINUS': 'O-',
+        };
+
+        final bt = reverseBtMap[driver['bloodType'] as String? ?? ''] ?? '';
+
+        final medCond = driver['medicalConditions'] as Map<String, dynamic>?;
+
+        final rawCond = medCond?['Chronic Conditions'] as List<dynamic>? ?? [];
+        final conditions = rawCond
+            .map((e) => {
+                  'name': (e as Map)['name'] as String? ?? '',
+                  'note': e['case'] as String? ?? '',
+                })
+            .toList();
+
+        final rawAllerg =
+            medCond?['Critical Allergies'] as List<dynamic>? ?? [];
+        final allergies = rawAllerg
+            .map((e) => {'name': e as String? ?? '', 'note': ''})
+            .toList();
+
+        setState(() {
+          if (bt.isNotEmpty) _bloodType = bt;
+          if (conditions.isNotEmpty)
+            _conditions = List<Map<String, String>>.from(conditions);
+          if (allergies.isNotEmpty)
+            _allergies = List<Map<String, String>>.from(allergies);
+        });
+
+        // Update local cache
+        final prefs = await SharedPreferences.getInstance();
+        await Future.wait([
+          prefs.setString(_kBloodType, _bloodType),
+          prefs.setString(_kConditions, jsonEncode(_conditions)),
+          prefs.setString(_kAllergies, jsonEncode(_allergies)),
+        ]);
+      }
+    } catch (e) {
+      assert(() {
+        debugPrint('Health fetch from server error: $e');
+        return true;
+      }());
+    }
   }
 
   // Fire-and-forget auto-save — called silently after every mutation
