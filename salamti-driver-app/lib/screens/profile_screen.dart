@@ -122,6 +122,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     setState(() => _isLoading = false);
 
+    // Recovery: fetch vehicle from API if _vehicleId is null
+    if (_vehicleId == null) {
+      try {
+        final token = await AuthService.getAccessToken();
+        final res = await http.get(
+          Uri.parse('${ApiConfig.baseUrl}/vehicles'),
+          headers: {
+            'Content-Type': 'application/json',
+            if (token != null) 'Authorization': 'Bearer $token',
+          },
+        );
+        if (res.statusCode == 200 || res.statusCode == 201) {
+          final vehicles =
+              jsonDecode(res.body)['data']['vehicles'] as List<dynamic>;
+          if (vehicles.isNotEmpty) {
+            final v = vehicles.first as Map<String, dynamic>;
+            _vehicleId = v['id'] as String;
+            _makerCtrl.text = v['maker'] as String? ?? '';
+            _modelCtrl.text = v['model'] as String? ?? '';
+            _colorCtrl.text = v['color'] as String? ?? '';
+            _year = v['year']?.toString() ?? '2026';
+            _plateCtrl.text = v['licensePlate'] as String? ?? '';
+            setState(() {});
+            await Future.wait([
+              prefs.setString(kVehicleId, _vehicleId!),
+              prefs.setString(kVehicleMake, _makerCtrl.text),
+              prefs.setString(kVehicleModel, _modelCtrl.text),
+              prefs.setString(kVehicleColor, _colorCtrl.text),
+              prefs.setString(kVehicleYear, _year),
+              prefs.setString(kVehiclePlate, _plateCtrl.text),
+            ]);
+          }
+        }
+      } catch (e) {
+        assert(() {
+          debugPrint('Vehicle recovery error: $e');
+          return true;
+        }());
+      }
+    }
+
     // Step 2 — Fetch vehicle from API in background if ID exists
     if (_vehicleId != null) {
       try {
