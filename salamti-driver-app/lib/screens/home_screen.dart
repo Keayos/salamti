@@ -23,7 +23,7 @@ class _HomeScreenState extends State<HomeScreen>
   late Animation<double> _pulseAnim;
   bool _showSOS = false;
   String? _obuId;
-  bool _obuActive = false;
+  bool? _obuActive = false;
   bool _obuLoading = false;
   bool _obuControlsLoading = false;
   bool _obuHealthLoading = false;
@@ -162,7 +162,10 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _fetchObuStatus() async {
-    if (_obuId == null) return;
+    if (_obuId == null) {
+      setState(() => _obuActive = null);
+      return;
+    }
     setState(() => _obuControlsLoading = true);
     try {
       final token = await AuthService.getAccessToken();
@@ -201,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen>
     }
     setState(() => _obuLoading = true);
     final token = await AuthService.getAccessToken();
-    final action = _obuActive ? 'deactivate' : 'activate';
+    final action = (_obuActive ?? false) ? 'deactivate' : 'activate';
     print('OBU ID: $_obuId');
     try {
       final res = await http.patch(
@@ -212,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen>
         },
       );
       if (res.statusCode == 200 || res.statusCode == 201) {
-        setState(() => _obuActive = !_obuActive);
+        setState(() => _obuActive = !(_obuActive ?? false));
       }
     } catch (e) {
       assert(() {
@@ -487,7 +490,9 @@ class _HomeScreenState extends State<HomeScreen>
 
                     // Activate / Deactivate button
                     GestureDetector(
-                      onTap: _obuControlsLoading || _obuLoading
+                      onTap: _obuActive == null ||
+                              _obuControlsLoading ||
+                              _obuLoading
                           ? null
                           : _toggleObu,
                       child: AnimatedContainer(
@@ -495,14 +500,18 @@ class _HomeScreenState extends State<HomeScreen>
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         decoration: BoxDecoration(
-                          color: _obuActive
-                              ? AppColors.red.withOpacity(0.15)
-                              : AppColors.blue.withOpacity(0.15),
+                          color: _obuActive == null
+                              ? AppColors.textMuted.withOpacity(0.10)
+                              : _obuActive!
+                                  ? AppColors.red.withOpacity(0.15)
+                                  : AppColors.blue.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: _obuActive
-                                ? AppColors.red.withOpacity(0.4)
-                                : AppColors.blue.withOpacity(0.4),
+                            color: _obuActive == null
+                                ? AppColors.textMuted.withOpacity(0.3)
+                                : _obuActive!
+                                    ? AppColors.red.withOpacity(0.4)
+                                    : AppColors.blue.withOpacity(0.4),
                           ),
                         ),
                         child: Center(
@@ -514,15 +523,19 @@ class _HomeScreenState extends State<HomeScreen>
                                       strokeWidth: 2, color: Colors.white),
                                 )
                               : Text(
-                                  _obuActive
-                                      ? 'Deactivate OBU'
-                                      : 'Activate OBU',
+                                  _obuActive == null
+                                      ? 'Connect to OBU first'
+                                      : _obuActive!
+                                          ? 'Deactivate OBU'
+                                          : 'Activate OBU',
                                   style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
-                                      color: _obuActive
-                                          ? AppColors.red
-                                          : AppColors.blueLight,
+                                      color: _obuActive == null
+                                          ? AppColors.textMuted
+                                          : _obuActive!
+                                              ? AppColors.red
+                                              : AppColors.blueLight,
                                       fontFamily: 'Outfit'),
                                 ),
                         ),
@@ -531,35 +544,47 @@ class _HomeScreenState extends State<HomeScreen>
                     const SizedBox(height: 12),
 
                     // Refresh OBU button
+                    // Refresh OBU button
                     GestureDetector(
-                      onTap: () async {
-                        await Future.wait([
-                          _checkObuHealth(),
-                          _fetchObuStatus(),
-                        ]);
-                      },
+                      onTap: _obuId == null
+                          ? null
+                          : () async {
+                              await Future.wait([
+                                _checkObuHealth(),
+                                _fetchObuStatus(),
+                              ]);
+                            },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: AppColors.blue.withOpacity(0.10),
+                          color: _obuId == null
+                              ? AppColors.textMuted.withOpacity(0.10)
+                              : AppColors.blue.withOpacity(0.10),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                              color: AppColors.blue.withOpacity(0.3)),
+                              color: _obuId == null
+                                  ? AppColors.textMuted.withOpacity(0.3)
+                                  : AppColors.blue.withOpacity(0.3)),
                         ),
                         child: Center(
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.refresh,
-                                  color: AppColors.blueLight, size: 16),
-                              SizedBox(width: 6),
+                                  color: _obuId == null
+                                      ? AppColors.textMuted
+                                      : AppColors.blueLight,
+                                  size: 16),
+                              const SizedBox(width: 6),
                               Text('Refresh OBU',
                                   style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
-                                      color: AppColors.blueLight,
+                                      color: _obuId == null
+                                          ? AppColors.textMuted
+                                          : AppColors.blueLight,
                                       fontFamily: 'Outfit')),
                             ],
                           ),
@@ -591,16 +616,22 @@ class _HomeScreenState extends State<HomeScreen>
 
                     // Get OBU Location button
                     GestureDetector(
-                      onTap: _obuLocationLoading ? null : _getObuLocation,
+                      onTap: _obuId == null || _obuLocationLoading
+                          ? null
+                          : _getObuLocation,
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         decoration: BoxDecoration(
-                          color: AppColors.blue.withOpacity(0.15),
+                          color: _obuId == null
+                              ? AppColors.textMuted.withOpacity(0.10)
+                              : AppColors.blue.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                              color: AppColors.blue.withOpacity(0.4)),
+                              color: _obuId == null
+                                  ? AppColors.textMuted.withOpacity(0.3)
+                                  : AppColors.blue.withOpacity(0.4)),
                         ),
                         child: Center(
                           child: Row(
@@ -614,11 +645,13 @@ class _HomeScreenState extends State<HomeScreen>
                                           strokeWidth: 2,
                                           color: AppColors.blueLight),
                                     )
-                                  : const Text('Get OBU Location',
+                                  : Text('Get OBU Location',
                                       style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
-                                          color: AppColors.blueLight,
+                                          color: _obuId == null
+                                              ? AppColors.textMuted
+                                              : AppColors.blueLight,
                                           fontFamily: 'Outfit')),
                               if (_obuLocation != null) ...[
                                 const SizedBox(width: 8),
