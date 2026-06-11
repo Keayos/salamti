@@ -23,7 +23,8 @@ class _HomeScreenState extends State<HomeScreen>
   late Animation<double> _pulseAnim;
   bool _showSOS = false;
   String? _obuId;
-  bool? _obuActive = false;
+  bool? _obuActive;
+  String? _obuStatus; // 'ACTIVE' | 'READY' | 'OUTDATED' | 'BROKEN' | null
   bool _obuLoading = false;
   bool _obuControlsLoading = false;
   bool _obuHealthLoading = false;
@@ -147,8 +148,15 @@ class _HomeScreenState extends State<HomeScreen>
     setState(() {
       _obuId = prefs.getString('obu_id');
       _obuInstCached = prefs.getString('obu_inst_number');
+      _obuVersionCached = prefs.getString('obu_version');
       _obuSimCached = prefs.getString('obu_sim_number');
     });
+    _obuStatus = prefs.getString('obu_status');
+    _obuActive = _obuStatus == 'ACTIVE'
+        ? true
+        : _obuStatus == 'READY'
+            ? false
+            : null;
   }
 
   // ── Load all OBU data sequentially ──
@@ -163,7 +171,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _fetchObuStatus() async {
     if (_obuId == null) {
-      setState(() => _obuActive = null);
+      setState(() {
+        _obuActive = null;
+        _obuStatus = null;
+      });
       return;
     }
     setState(() => _obuControlsLoading = true);
@@ -177,20 +188,33 @@ class _HomeScreenState extends State<HomeScreen>
         },
       );
       if (res.statusCode == 200 || res.statusCode == 201) {
-        final data = jsonDecode(res.body)['data'];
-        print('FETCH OBU DATA: $data');
-        final obu = data['obu'] as Map<String, dynamic>;
-        print('FETCH OBU OBJECT: $obu');
-        final state = obu['state'] as int? ?? 0;
-        print('FETCH OBU STATE: $state');
-        setState(() => _obuActive = (state == 1));
-        print('OBU ACTIVE SET TO: $_obuActive');
+        final obu = jsonDecode(res.body)['data']['obu'] as Map<String, dynamic>;
+        final status = obu['status'] as String? ?? '';
+        setState(() {
+          _obuStatus = status;
+          _obuActive = status == 'ACTIVE'
+              ? true
+              : status == 'READY'
+                  ? false
+                  : null;
+        });
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('obu_status', status);
+      } else {
+        setState(() {
+          _obuActive = null;
+          _obuStatus = null;
+        });
       }
     } catch (e) {
       assert(() {
         debugPrint('OBU status fetch error: $e');
         return true;
       }());
+      setState(() {
+        _obuActive = null;
+        _obuStatus = null;
+      });
     } finally {
       setState(() => _obuControlsLoading = false);
     }
@@ -198,14 +222,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _toggleObu() async {
     if (_obuLoading) return;
-    if (_obuId == null) {
-      print('no OBU ID found');
-      return;
-    }
+    if (_obuId == null) return;
     setState(() => _obuLoading = true);
     final token = await AuthService.getAccessToken();
-    final action = (_obuActive ?? false) ? 'deactivate' : 'activate';
-    print('OBU ID: $_obuId');
+    final action = _obuStatus == 'ACTIVE' ? 'deactivate' : 'activate';
     try {
       final res = await http.patch(
         Uri.parse('${ApiConfig.baseUrl}/obus/$_obuId/$action'),
@@ -215,7 +235,13 @@ class _HomeScreenState extends State<HomeScreen>
         },
       );
       if (res.statusCode == 200 || res.statusCode == 201) {
-        setState(() => _obuActive = !(_obuActive ?? false));
+        final newStatus = _obuStatus == 'ACTIVE' ? 'READY' : 'ACTIVE';
+        setState(() {
+          _obuStatus = newStatus;
+          _obuActive = newStatus == 'ACTIVE';
+        });
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('obu_status', newStatus);
       }
     } catch (e) {
       assert(() {
@@ -257,12 +283,17 @@ class _HomeScreenState extends State<HomeScreen>
           if (_obuSimCached != null)
             prefs.setString('obu_sim_number', _obuSimCached!),
         ]);
+      } else {
+        // No response — set status to '-'
+        setState(() => _obuHealth = null);
       }
     } catch (e) {
       assert(() {
         debugPrint('OBU health check error: $e');
         return true;
       }());
+      // On error — set status to '-'
+      setState(() => _obuHealth = null);
     } finally {
       setState(() => _obuHealthLoading = false);
     }
@@ -493,28 +524,29 @@ class _HomeScreenState extends State<HomeScreen>
 
                       // Activate / Deactivate button
                       GestureDetector(
-                        onTap: _obuActive == null ||
-                                _obuControlsLoading ||
-                                _obuLoading
-                            ? null
-                            : _toggleObu,
+                        onTap:
+                            (_obuStatus == 'ACTIVE' || _obuStatus == 'READY') &&
+                                    !_obuControlsLoading &&
+                                    !_obuLoading
+                                ? _toggleObu
+                                : null,
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           decoration: BoxDecoration(
-                            color: _obuActive == null
-                                ? AppColors.textMuted.withOpacity(0.10)
-                                : _obuActive!
-                                    ? AppColors.red.withOpacity(0.15)
-                                    : AppColors.blue.withOpacity(0.15),
+                            color: _obuStatus == 'ACTIVE'
+                                ? AppColors.red.withOpacity(0.15)
+                                : _obuStatus == 'READY'
+                                    ? AppColors.blue.withOpacity(0.15)
+                                    : AppColors.textMuted.withOpacity(0.10),
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: _obuActive == null
-                                  ? AppColors.textMuted.withOpacity(0.3)
-                                  : _obuActive!
-                                      ? AppColors.red.withOpacity(0.4)
-                                      : AppColors.blue.withOpacity(0.4),
+                              color: _obuStatus == 'ACTIVE'
+                                  ? AppColors.red.withOpacity(0.4)
+                                  : _obuStatus == 'READY'
+                                      ? AppColors.blue.withOpacity(0.4)
+                                      : AppColors.textMuted.withOpacity(0.3),
                             ),
                           ),
                           child: Center(
@@ -526,19 +558,25 @@ class _HomeScreenState extends State<HomeScreen>
                                         strokeWidth: 2, color: Colors.white),
                                   )
                                 : Text(
-                                    _obuActive == null
+                                    _obuStatus == null
                                         ? 'Connect to OBU first'
-                                        : _obuActive!
+                                        : _obuStatus == 'ACTIVE'
                                             ? 'Deactivate OBU'
-                                            : 'Activate OBU',
+                                            : _obuStatus == 'READY'
+                                                ? 'Activate OBU'
+                                                : _obuStatus == 'OUTDATED'
+                                                    ? 'Outdated OBU version'
+                                                    : _obuStatus == 'BROKEN'
+                                                        ? 'OBU is broken'
+                                                        : 'Connect to OBU first',
                                     style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w700,
-                                        color: _obuActive == null
-                                            ? AppColors.textMuted
-                                            : _obuActive!
-                                                ? AppColors.red
-                                                : AppColors.blueLight,
+                                        color: _obuStatus == 'ACTIVE'
+                                            ? AppColors.red
+                                            : _obuStatus == 'READY'
+                                                ? AppColors.blueLight
+                                                : AppColors.textMuted,
                                         fontFamily: 'Outfit'),
                                   ),
                           ),
@@ -604,9 +642,17 @@ class _HomeScreenState extends State<HomeScreen>
                               ? const _ObuHealthRowLoading(label: 'Status')
                               : _ObuHealthRow(
                                   label: 'Status',
-                                  value: _obuHealth?['status'] == 'HEALTH_OK'
+                                  boldLabel: true,
+                                  value: _obuHealth?['state'] == 1
                                       ? 'Safe'
-                                      : (_obuHealth?['status'] ?? '—')),
+                                      : _obuHealth?['state'] == 0
+                                          ? 'Unsafe'
+                                          : '—',
+                                  valueColor: _obuHealth?['state'] == 1
+                                      ? AppColors.green
+                                      : _obuHealth?['state'] == 0
+                                          ? AppColors.red
+                                          : AppColors.textPrimary),
                           _ObuHealthRow(
                               label: 'Instance', value: _obuInstCached ?? '—'),
                           _ObuHealthRow(
@@ -1097,7 +1143,13 @@ class _SOSDialogState extends State<_SOSDialog> {
 //  OBU health table
 class _ObuHealthRow extends StatelessWidget {
   final String label, value;
-  const _ObuHealthRow({required this.label, required this.value});
+  final Color? valueColor;
+  final bool boldLabel;
+  const _ObuHealthRow(
+      {required this.label,
+      required this.value,
+      this.valueColor,
+      this.boldLabel = false});
 
   @override
   Widget build(BuildContext context) {
@@ -1107,15 +1159,18 @@ class _ObuHealthRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style: const TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
+              style: TextStyle(
+                  fontSize: boldLabel ? 14 : 13,
+                  fontWeight: boldLabel ? FontWeight.w700 : FontWeight.normal,
+                  color: boldLabel
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
                   fontFamily: 'Outfit')),
           Text(value,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: valueColor ?? AppColors.textPrimary,
                   fontFamily: 'Outfit')),
         ],
       ),
