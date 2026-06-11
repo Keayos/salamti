@@ -375,23 +375,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final existingObuId = prefs.getString(kObuId);
     String? obuId = existingObuId;
 
-    // if obu was already connected
-    if (existingObuId != null && existingObuId.isNotEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: const Text('OBU is already connected to your car.',
-              style: TextStyle(fontFamily: 'Outfit')),
-          backgroundColor: AppColors.blue,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ));
-      }
-      setState(() => _isConnecting = false);
-      return;
-    }
-
-    // If no existing OBU, claim it first
+    // If no existing OBU id, claim it first
     if (existingObuId == null || existingObuId.isEmpty) {
       try {
         final obuRes = await http.post(
@@ -469,7 +453,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         },
         body: jsonEncode({'vehicleId': _vehicleId}),
       );
-      if (connectRes.statusCode != 200 && connectRes.statusCode != 201) {
+      if (connectRes.statusCode == 400) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text('OBU is already connected to your car.',
+                style: TextStyle(fontFamily: 'Outfit')),
+            backgroundColor: AppColors.blue,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ));
+        }
+        setState(() => _isConnecting = false);
+        return;
+      } else if (connectRes.statusCode != 200 && connectRes.statusCode != 201) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: const Text(
@@ -642,57 +639,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('YEAR',
-                                  style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textMuted,
-                                      letterSpacing: 0.8,
-                                      fontFamily: 'Outfit')),
-                              const SizedBox(height: 6),
-                              Container(
-                                decoration: const BoxDecoration(
-                                  border: Border(
-                                    bottom: BorderSide(
-                                        color: AppColors.border, width: 1.0),
-                                  ),
-                                ),
-                                child: DropdownButton<String>(
-                                  value: _year,
-                                  isExpanded: true,
-                                  dropdownColor: AppColors.card2,
-                                  underline: const SizedBox(),
-                                  menuMaxHeight: 300,
-                                  //itemHeight: 40,
-                                  style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textPrimary,
-                                      fontFamily: 'Outfit'),
-                                  items: _years
-                                      .map((y) => DropdownMenuItem(
-                                          value: y, child: Text(y)))
-                                      .toList(),
-                                  onChanged: (v) {
-                                    if (v != null) setState(() => _year = v);
-                                  },
-                                ),
-                              ),
-                            ],
+                          child: _VehicleEditField(
+                            label: 'LICENSE PLATE',
+                            controller: _plateCtrl,
+                            hint: 'e.g. EGY-9876',
+                            blue: true,
+                            onChanged: (_) => setState(() {}),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 14),
-                    _VehicleEditField(
-                      label: 'LICENSE PLATE',
-                      controller: _plateCtrl,
-                      hint: 'e.g. EGY-9876',
-                      blue: true,
-                      onChanged: (_) => setState(() {}),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('YEAR',
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textMuted,
+                                letterSpacing: 0.8,
+                                fontFamily: 'Outfit')),
+                        const SizedBox(height: 6),
+                        Container(
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                  color: AppColors.border, width: 1.0),
+                            ),
+                          ),
+                          child: DropdownButton<String>(
+                            value: _year,
+                            isExpanded: true,
+                            dropdownColor: AppColors.card2,
+                            underline: const SizedBox(),
+                            menuMaxHeight: 300,
+                            style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                                fontFamily: 'Outfit'),
+                            items: _years
+                                .map((y) =>
+                                    DropdownMenuItem(value: y, child: Text(y)))
+                                .toList(),
+                            onChanged: (v) {
+                              if (v != null) setState(() => _year = v);
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
