@@ -1,31 +1,30 @@
-# salamti-app
-A cross-platform mobile application built with Flutter and Dart designed to provide vehicle telemetry tracking, On-Board Unit (OBU) device synchronization, and automated legal identification document verification. The app features secure local token storage, Google authentication, real-time location mapping services, and remote API integrations.
-# Salamti 📐✨
+# Geometric_Diagram Template
 
 ## Description
-Salamti is a robust, production-ready cross-platform mobile application built with the Flutter framework and Dart. Designed to enhance vehicular operations and user safety, the app acts as a central hub for vehicle management and IoT connectivity by pairing directly with vehicle On-Board Units (OBU). It securely syncs device metadata, monitors hardware SIM states, logs driving telemetry, and features a digital identity vault enabling seamless document uploads for driver licenses and ID cards.
+Salamti (سلامتي) is a feature-rich, cross-platform health and vehicular safety mobile application built using Flutter and Dart. The app acts as an intelligent safety companion by interfacing with automotive On-Board Units (OBU) to track real-time vehicle positioning and monitor hardware device health (SIM status, firmware version, and device states). It features an instant SOS broadcast system, an offline-cached emergency medical profile, multi-tier notification logs, and an emergency contacts manager designed to automatically sync and dispatch alerts over secured remote API endpoints.
 
 ---
 
 ## Features
-- **OBU & Vehicle Management:** Integrates directly with remote backend endpoints to pair, test, and register vehicular On-Board Units alongside active SIM network indicators.
-- **Identity & Document Verification:** Includes an automated settings portal allowing users to capture, crop, and upload high-resolution verification images of driver licenses and identification cards.
-- **Real-Time Mapping & Telemetry:** Combines OpenStreetMap layers and Google Maps SDKs to track active coordinates, evaluate operational paths, and log GPS locations safely.
-- **Secure Authentication Hub:** Implements a streamlined authentication lifecycle leveraging Google Sign-In federated identity providers combined with encrypted hardware storage keys.
+- **OBU Hardware Companion:** Interfaced telemetry module that monitors active vehicular On-Board Units, maps live GPS coordinate locations using automated map views, and checks structural device health flags (ACTIVE, READY, BROKEN).
+- **Instant SOS Broadcast:** An interactive, interactive pulse-animated SOS module designed to trigger immediate emergency distress protocols and dispatch critical status markers.
+- **Emergency Medical Vault:** A locally cached profile repository letting users configure crucial blood types (e.g., A+, O-), track ongoing medications, compile explicit allergy databases, and sync information securely to remote health profiles.
+- **Smart Contact Synchronization:** A dedicated contact manager with local SharedPreferences fallback caching allowing users to add trusted guardians, define relationship tiers (FAMILY, PARTNER, COLLEAGUE), and configure custom granular alerting options (Auto-Notify, Instant SMS, Voice Calls).
+- **Multi-Stage Authentication Architecture:** A secure multi-page registration wizard handling credential authentication, profile assignment rules, and unified token tracking.
 
 ---
 
 ## Technologies Used
-* **Flutter & Dart SDK** (Cross-platform application core framework)
-* **Google Maps Flutter & Flutter Map** (Hybrid tile-rendering geographical engines)
-* **Firebase Core & Google Sign-In** (Federated identity management and cloud services)
-* **Http & Http Parser** (Multi-part binary document stream handling and API payload execution)
-* **Flutter Secure Storage & Shared Preferences** (Hardware-level keychain encryption and key-value state persistence)
+* **Flutter Framework & Dart SDK** (Cross-platform client architecture)
+* **Flutter Map & Geolocator** (Real-time geographic coordinate tracking and map layer tiling)
+* **Provider** (Centralized app state management)
+* **Http & Http Parser** (REST API request orchestration, multi-part form payloads, and error handling)
+* **Shared Preferences & Flutter Secure Storage** (Encrypted token keychains and high-performance local data caching)
 
 ---
 
 ## How to Use
-1. **Set Up the Environment:** Ensure you have the Flutter SDK (compatible with environment rules `>=3.0.0 <4.0.0`) and Android Studio/Xcode properly configured on your computer.
-2. **Fetch Dependencies:** Navigate to your project root directory and run the package retriever to clean and install project plugins:
+1. **Configure Prerequisites:** Verify that you have the Flutter SDK set up on your machine satisfying target bounds (`>=3.0.0 <4.0.0`).
+2. **Install Code Packages:** Execute the pub dependency structural manager to pull and bind required third-party plugins:
    ```bash
    flutter pub get
