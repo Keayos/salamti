@@ -4,24 +4,6 @@
 Salamti (سلامتي) is a feature-rich, cross-platform health and vehicular safety mobile application built using Flutter and Dart. The app acts as an intelligent safety companion by interfacing with automotive On-Board Units (OBU) to track real-time vehicle positioning and monitor hardware device health (SIM status, firmware version, and device states). It features an instant SOS broadcast system, an offline-cached emergency medical profile, multi-tier notification logs, and an emergency contacts manager designed to automatically sync and dispatch alerts over secured remote API endpoints.
 
 ---
-lib/
-├── main.dart             # Application initialization and entry script
-├── screens/
-│   ├── auth_screen.dart     # Multi-step authentication, login, and registration wizard
-│   ├── home_screen.dart     # Interactive SOS layout, live maps, and OBU telemetry panel
-│   ├── profile_screen.dart  # Vehicle profile matching and OBU installation identifiers
-│   ├── health_screen.dart   # Local medical card repository and allergy tracker
-│   ├── contacts_screen.dart # Emergency guardian coordinator and channel setup
-│   ├── settings_screen.dart # Account management, profile image uploads, and security configuration
-│   └── alerts_screen.dart   # Interactive threat notification timelines and historical system logs
-├── theme/
-│   └── app_theme.dart       # Deep dark palette specifications and structural font families
-├── services/
-│   ├── auth_service.dart    # Token managers and login controllers
-│   └── api_config.dart      # Global API routing parameters and server endpoint paths
-└── widgets/
-    └── common.dart          # Reusable customized UI containers and layout dividers
----
 
 ## Features
 - **OBU Hardware Companion:** Interfaced telemetry module that monitors active vehicular On-Board Units, maps live GPS coordinate locations using automated map views, and checks structural device health flags (ACTIVE, READY, BROKEN).
